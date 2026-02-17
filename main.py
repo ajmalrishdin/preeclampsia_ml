@@ -53,6 +53,7 @@ from sklearn.ensemble import (RandomForestClassifier, GradientBoostingClassifier
                               RandomForestRegressor, GradientBoostingRegressor)
 from sklearn.svm import SVC
 from sklearn.inspection import permutation_importance
+import joblib
 
 plt.rcParams.update({
     "figure.dpi":     300,
@@ -112,6 +113,8 @@ def main():
     if not args.input or not args.output:
         print("[ERROR] --input and --output are mandatory"); sys.exit(1)
     os.makedirs(args.output, exist_ok=True)
+    models_dir = os.path.join(args.output, "models")
+    os.makedirs(models_dir, exist_ok=True)
 
     # ------------------------------------------------------------------ #
     # 4.1 Read data (smart delimiter)
@@ -227,6 +230,10 @@ def main():
                                                  average='macro')
             conf_mats[out][m] = confusion_matrix(yte, ypred)
 
+            # save trained model and scaler
+            joblib.dump(model,  os.path.join(models_dir, f"{out}_{m}_model.joblib"))
+            joblib.dump(scaler, os.path.join(models_dir, f"{out}_{m}_scaler.joblib"))
+
             try:
                 p_res = permutation_importance(model, Xte, yte,
                                                n_repeats=5,
@@ -265,6 +272,10 @@ def main():
             mae = mean_absolute_error(yte, ypred)
             r2  = r2_score(yte, ypred)
             reg_metrics[out][m] = (mse, rmse, mae, r2)
+
+            # save trained model and scaler
+            joblib.dump(model,  os.path.join(models_dir, f"{out}_{m}_model.joblib"))
+            joblib.dump(scaler, os.path.join(models_dir, f"{out}_{m}_scaler.joblib"))
 
             try:
                 p_res = permutation_importance(model, Xte, yte,
@@ -447,7 +458,9 @@ def main():
         data[list(feats) + outcomes].to_csv(
             f"{args.output}/subset_{tag}.csv", sep=';', index=True)
 
-    print(f"\n[INFO] All outputs written to: {args.output}\n")
+    saved_models = [f for f in os.listdir(models_dir) if f.endswith('_model.joblib')]
+    print(f"\n[INFO] {len(saved_models)} models saved to: {models_dir}")
+    print(f"[INFO] All outputs written to: {args.output}\n")
 
 ###############################################################################
 if __name__ == "__main__":
